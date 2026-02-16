@@ -11,8 +11,10 @@ async function analyze() {
   const urlInput = document.getElementById('urlInput');
   const output = document.getElementById('output');
   const analyzeBtn = document.getElementById('analyzeBtn');
+  const quickModeCheckbox = document.getElementById('quickMode');
   
   const url = urlInput.value.trim();
+  const quickMode = quickModeCheckbox ? quickModeCheckbox.checked : false;
   
   if (!url) {
     showError('Please enter a URL', 'Enter a valid website URL to analyze');
@@ -26,7 +28,10 @@ async function analyze() {
     const response = await fetch(`${API_URL}/analyze`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ targetUrl: url })
+      body: JSON.stringify({ 
+        targetUrl: url,
+        quickMode: quickMode
+      })
     });
 
     const data = await response.json();

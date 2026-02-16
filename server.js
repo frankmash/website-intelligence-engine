@@ -26,7 +26,16 @@ async function initBrowser() {
   if (!browser) {
     browser = await puppeteer.launch({
       headless: "new",
-      args: ["--no-sandbox", "--disable-setuid-sandbox"]
+      args: [
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--disable-dev-shm-usage",
+        "--disable-accelerated-2d-canvas",
+        "--disable-gpu",
+        "--window-size=1920x1080",
+        "--disable-web-security",
+        "--disable-features=IsolateOrigins,site-per-process"
+      ]
     });
     console.log("🟢 Puppeteer browser launched");
   }
@@ -354,37 +363,69 @@ app.post("/analyze", async (req, res) => {
   try {
     await initBrowser();
 
-    let { targetUrl } = req.body;
+    let { targetUrl, quickMode } = req.body;
 
     if (!targetUrl) {
       return res.status(400).json({ error: "URL required" });
     }
 
     targetUrl = normalizeUrl(targetUrl);
+    console.log(`\n🔍 Analyzing: ${targetUrl}${quickMode ? ' (Quick Mode)' : ''}`);
 
     page = await browser.newPage();
 
     await page.setUserAgent(
-      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36"
     );
 
+    // Set shorter timeout for quick mode
+    const timeout = quickMode ? 30000 : 60000;
+    const waitTime = quickMode ? 1000 : 3000;
+
     // Try multiple strategies for loading the page
+    let loadSuccess = false;
+    
+    // Strategy 1: Try networkidle2 (wait for network to be idle)
     try {
+      console.log(`Loading ${targetUrl} with networkidle2...`);
       await page.goto(targetUrl, {
         waitUntil: "networkidle2",
-        timeout: 60000
+        timeout: timeout
       });
+      loadSuccess = true;
+      console.log('✓ Loaded with networkidle2');
     } catch (navError) {
-      // If networkidle2 fails, try with domcontentloaded
-      console.log('Retrying with domcontentloaded...');
-      await page.goto(targetUrl, {
-        waitUntil: "domcontentloaded",
-        timeout: 60000
-      });
+      console.log('✗ networkidle2 failed, trying domcontentloaded...');
+      
+      // Strategy 2: Try domcontentloaded (just wait for HTML)
+      try {
+        await page.goto(targetUrl, {
+          waitUntil: "domcontentloaded",
+          timeout: timeout
+        });
+        loadSuccess = true;
+        console.log('✓ Loaded with domcontentloaded');
+      } catch (navError2) {
+        console.log('✗ domcontentloaded failed, trying load...');
+        
+        // Strategy 3: Try basic load event
+        try {
+          await page.goto(targetUrl, {
+            waitUntil: "load",
+            timeout: timeout
+          });
+          loadSuccess = true;
+          console.log('✓ Loaded with load event');
+        } catch (navError3) {
+          // If all strategies fail, throw the error
+          throw new Error(`Unable to load ${targetUrl}. The site may be blocking automated access, experiencing issues, or taking too long to respond.`);
+        }
+      }
     }
 
-    // Wait a bit for dynamic content
-    await delay(2000);
+    // Wait a bit for dynamic content to render
+    console.log(`Waiting ${waitTime}ms for dynamic content...`);
+    await delay(waitTime);
 
     const html = await page.content();
     const $ = cheerio.load(html);
@@ -448,7 +489,7 @@ app.post("/analyze", async (req, res) => {
     res.status(500).json({
       error: errorType,
       message: userMessage,
-      technicalDetails: error.message
+      technicalDetails: error.stack || error.message
     });
   }
 });

@@ -1,6 +1,6 @@
 {
   "name": "site-scanner",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "Advanced web analysis tool with tech stack, SEO, performance, and security scanning",
   "main": "server.js",
   "scripts": {
