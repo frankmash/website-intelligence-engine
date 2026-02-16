@@ -1,0 +1,22 @@
+{
+  "name": "site-scanner",
+  "version": "2.0.0",
+  "description": "Advanced web analysis tool with tech stack, SEO, performance, and security scanning",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js"
+  },
+  "keywords": ["web", "analysis", "seo", "scanner", "puppeteer"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "puppeteer": "^21.6.1",
+    "cheerio": "^1.0.0-rc.12",
+    "cors": "^2.8.5"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  }
+}

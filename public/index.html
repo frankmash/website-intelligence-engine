@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Advanced web analysis tool with tech stack detection, SEO analysis, and performance metrics">
+  <title>SITE SCANNER — Deep Web Analysis</title>
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&family=Bebas+Neue&display=swap" rel="stylesheet">
+  
+  <!-- Styles -->
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>SITE SCANNER</h1>
+      <div class="subtitle">Deep Web Analysis Engine</div>
+    </header>
+
+    <div class="input-section">
+      <div class="input-wrapper">
+        <input 
+          type="text" 
+          id="urlInput" 
+          placeholder="https://example.com"
+          autocomplete="url"
+          aria-label="Website URL to analyze"
+        >
+        <button id="analyzeBtn" onclick="analyze()">
+          <span>ANALYZE</span>
+        </button>
+      </div>
+    </div>
+
+    <div id="output"></div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
