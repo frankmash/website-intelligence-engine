@@ -378,14 +378,11 @@ app.post("/analyze", async (req, res) => {
       "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36"
     );
 
-    // Set shorter timeout for quick mode
     const timeout = quickMode ? 30000 : 60000;
     const waitTime = quickMode ? 1000 : 3000;
 
-    // Try multiple strategies for loading the page
     let loadSuccess = false;
     
-    // Strategy 1: Try networkidle2 (wait for network to be idle)
     try {
       console.log(`Loading ${targetUrl} with networkidle2...`);
       await page.goto(targetUrl, {
@@ -397,7 +394,6 @@ app.post("/analyze", async (req, res) => {
     } catch (navError) {
       console.log('✗ networkidle2 failed, trying domcontentloaded...');
       
-      // Strategy 2: Try domcontentloaded (just wait for HTML)
       try {
         await page.goto(targetUrl, {
           waitUntil: "domcontentloaded",
@@ -408,7 +404,6 @@ app.post("/analyze", async (req, res) => {
       } catch (navError2) {
         console.log('✗ domcontentloaded failed, trying load...');
         
-        // Strategy 3: Try basic load event
         try {
           await page.goto(targetUrl, {
             waitUntil: "load",
@@ -417,13 +412,11 @@ app.post("/analyze", async (req, res) => {
           loadSuccess = true;
           console.log('✓ Loaded with load event');
         } catch (navError3) {
-          // If all strategies fail, throw the error
           throw new Error(`Unable to load ${targetUrl}. The site may be blocking automated access, experiencing issues, or taking too long to respond.`);
         }
       }
     }
 
-    // Wait a bit for dynamic content to render
     console.log(`Waiting ${waitTime}ms for dynamic content...`);
     await delay(waitTime);
 
@@ -471,7 +464,6 @@ app.post("/analyze", async (req, res) => {
     let userMessage = error.message;
     let errorType = "Failed to analyze website";
 
-    // Better error messages for common issues
     if (error.message.includes("Navigation timeout") || error.message.includes("timeout")) {
       errorType = "Timeout Error";
       userMessage = "The website took too long to respond. This could be due to: slow server response, heavy page content, or network issues. Try again or test a different URL.";
