@@ -10,6 +10,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&family=Bebas+Neue&display=swap" rel="stylesheet">
+  
+  <!-- Styles -->
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -24,17 +26,17 @@
         <input 
           type="text" 
           id="urlInput" 
-          placeholder="https://example.com"
+          placeholder="Enter website URL..."
           autocomplete="url"
           aria-label="Website URL to analyze"
         >
         <button id="analyzeBtn" onclick="analyze()">
-          <span>ANALYZE</span>
+          <span>Analyze</span>
         </button>
       </div>
-      <div style="text-align: center; margin-top: 15px;">
-        <label style="cursor: pointer; font-size: 0.9rem; opacity: 0.8;">
-          <input type="checkbox" id="quickMode" style="margin-right: 8px;">
+      <div class="quick-mode-container">
+        <label>
+          <input type="checkbox" id="quickMode">
           Quick Mode (faster, less detailed)
         </label>
       </div>
