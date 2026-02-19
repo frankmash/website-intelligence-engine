@@ -784,3 +784,170 @@ input[type="checkbox"] {
   outline: 2px solid var(--holo-purple);
   outline-offset: 4px;
 }
+
+/* ===============================
+   EXPORT BUTTONS
+================================ */
+.export-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 20px;
+  flex-wrap: wrap;
+}
+
+.export-btn {
+  padding: 12px 24px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.9rem;
+  font-weight: 600;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  color: var(--text-primary);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(20px);
+}
+
+.export-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: var(--holo-purple);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(168, 85, 247, 0.3);
+}
+
+.export-btn span {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ===============================
+   SCREENSHOT SECTION
+================================ */
+.screenshot-section {
+  margin-bottom: 24px;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  backdrop-filter: blur(20px);
+  overflow: hidden;
+  box-shadow: var(--glass-shadow);
+}
+
+.screenshot-preview {
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: 1px solid var(--glass-border);
+}
+
+.screenshot-preview:hover {
+  transform: scale(1.02);
+  box-shadow: 0 8px 32px rgba(168, 85, 247, 0.3);
+}
+
+.screenshot-hint {
+  text-align: center;
+  color: var(--text-tertiary);
+  font-size: 0.85rem;
+  margin-top: 12px;
+  font-style: italic;
+}
+
+/* ===============================
+   SCREENSHOT MODAL
+================================ */
+.modal {
+  display: none;
+  position: fixed;
+  z-index: 1000;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.95);
+  justify-content: center;
+  align-items: center;
+  animation: fadeIn 0.3s ease;
+}
+
+.modal-content {
+  max-width: 95%;
+  max-height: 95%;
+  object-fit: contain;
+  border-radius: var(--radius-lg);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+.modal-close {
+  position: absolute;
+  top: 30px;
+  right: 50px;
+  color: white;
+  font-size: 50px;
+  font-weight: 300;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  z-index: 1001;
+}
+
+.modal-close:hover {
+  color: var(--holo-purple);
+  transform: scale(1.2);
+}
+
+/* ===============================
+   TOAST NOTIFICATIONS
+================================ */
+.toast {
+  position: fixed;
+  bottom: 30px;
+  right: 30px;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(20px);
+  color: var(--text-primary);
+  padding: 16px 24px;
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  font-weight: 500;
+  z-index: 999;
+  opacity: 0;
+  transform: translateY(20px);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.toast.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ===============================
+   RESPONSIVE UPDATES
+================================ */
+@media (max-width: 768px) {
+  .export-actions {
+    flex-direction: column;
+  }
+
+  .export-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .modal-close {
+    top: 20px;
+    right: 20px;
+    font-size: 40px;
+  }
+
+  .toast {
+    left: 20px;
+    right: 20px;
+    bottom: 20px;
+  }
+}
