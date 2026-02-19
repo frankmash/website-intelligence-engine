@@ -87,6 +87,9 @@ function showError(title, message, details) {
 function displayResults(data) {
   const output = document.getElementById('output');
   
+  // Store data globally for export functions
+  window.currentScanData = data;
+  
   const html = `
     <div class="results">
       <div class="results-header">
@@ -95,7 +98,38 @@ function displayResults(data) {
           <span>📅 ${new Date(data.meta.analyzedAt).toLocaleString()}</span>
           <span>⏱️ ${data.meta.analysisTime}</span>
         </div>
+        
+        <!-- Export Buttons -->
+        <div class="export-actions">
+          <button class="export-btn" onclick="exportToPDF()">
+            <span>📄 Export PDF</span>
+          </button>
+          <button class="export-btn" onclick="exportToJSON()">
+            <span>💾 Export JSON</span>
+          </button>
+          <button class="export-btn" onclick="copyToClipboard()">
+            <span>📋 Copy Data</span>
+          </button>
+        </div>
       </div>
+
+      <!-- Screenshot Preview -->
+      ${data.screenshot ? `
+        <div class="screenshot-section">
+          <div class="section-header active" onclick="toggleScreenshot()">
+            Screenshot Preview
+          </div>
+          <div class="section-content active" id="screenshotContent">
+            <div class="section-body">
+              <img src="data:image/jpeg;base64,${data.screenshot}" 
+                   alt="Website Screenshot" 
+                   class="screenshot-preview"
+                   onclick="openScreenshotModal(this.src)">
+              <p class="screenshot-hint">Click image to view full size</p>
+            </div>
+          </div>
+        </div>
+      ` : ''}
 
       <div class="score-grid">
         <div class="score-card seo">
@@ -130,6 +164,12 @@ function displayResults(data) {
       ${createSection('Layout Structure', renderLayout(data.layout))}
       ${createSection('Accessibility Issues', renderAccessibility(data.accessibility))}
       ${createSection('Security Findings', renderSecurity(data.security))}
+    </div>
+    
+    <!-- Screenshot Modal -->
+    <div id="screenshotModal" class="modal" onclick="closeScreenshotModal()">
+      <span class="modal-close">&times;</span>
+      <img class="modal-content" id="modalImage">
     </div>
   `;
 
@@ -389,3 +429,273 @@ document.addEventListener('DOMContentLoaded', () => {
     urlInput.focus();
   }
 });
+
+/* =======================================
+   EXPORT FUNCTIONS
+======================================= */
+
+/**
+ * Export results to PDF
+ */
+function exportToPDF() {
+  const data = window.currentScanData;
+  if (!data) return;
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  
+  let yPos = 20;
+  const lineHeight = 7;
+  const pageWidth = doc.internal.pageSize.width;
+  const margin = 20;
+  const maxWidth = pageWidth - (margin * 2);
+
+  // Title
+  doc.setFontSize(24);
+  doc.setTextColor(168, 85, 247);
+  doc.text('SITE SCANNER REPORT', margin, yPos);
+  
+  yPos += 15;
+  doc.setFontSize(12);
+  doc.setTextColor(100, 100, 100);
+  doc.text(data.url, margin, yPos);
+  
+  yPos += 10;
+  doc.setFontSize(10);
+  doc.text(`Analyzed: ${new Date(data.meta.analyzedAt).toLocaleString()}`, margin, yPos);
+  doc.text(`Analysis Time: ${data.meta.analysisTime}`, pageWidth - margin - 50, yPos);
+  
+  yPos += 15;
+
+  // Score Summary
+  doc.setFontSize(16);
+  doc.setTextColor(0, 0, 0);
+  doc.text('Score Summary', margin, yPos);
+  yPos += 10;
+  
+  doc.setFontSize(11);
+  const scores = [
+    { label: 'SEO Score:', value: `${data.seo.score}/100`, color: [16, 185, 129] },
+    { label: 'Load Time:', value: `${(data.performance.loadTime / 1000).toFixed(2)}s`, color: [6, 182, 212] },
+    { label: 'Accessibility Issues:', value: data.accessibility.length.toString(), color: [168, 85, 247] },
+    { label: 'Security Findings:', value: data.security.length.toString(), color: [236, 72, 153] }
+  ];
+
+  scores.forEach(score => {
+    doc.setTextColor(100, 100, 100);
+    doc.text(score.label, margin, yPos);
+    doc.setTextColor(...score.color);
+    doc.text(score.value, margin + 60, yPos);
+    yPos += lineHeight;
+  });
+
+  yPos += 5;
+
+  // Technology Stack
+  if (data.techStack && data.techStack.length > 0) {
+    checkPageBreak();
+    doc.setFontSize(14);
+    doc.setTextColor(0, 0, 0);
+    doc.text('Technology Stack', margin, yPos);
+    yPos += 8;
+    
+    doc.setFontSize(10);
+    doc.setTextColor(80, 80, 80);
+    doc.text(data.techStack.join(', '), margin, yPos, { maxWidth });
+    yPos += 10;
+  }
+
+  // SEO Issues
+  if (data.seo.issues && data.seo.issues.length > 0) {
+    checkPageBreak();
+    doc.setFontSize(14);
+    doc.setTextColor(0, 0, 0);
+    doc.text('SEO Issues', margin, yPos);
+    yPos += 8;
+    
+    doc.setFontSize(10);
+    doc.setTextColor(239, 68, 68);
+    data.seo.issues.forEach((issue, index) => {
+      checkPageBreak();
+      const lines = doc.splitTextToSize(`${index + 1}. ${issue}`, maxWidth);
+      doc.text(lines, margin, yPos);
+      yPos += lines.length * lineHeight;
+    });
+    yPos += 5;
+  }
+
+  // Accessibility Issues
+  if (data.accessibility && data.accessibility.length > 0) {
+    checkPageBreak();
+    doc.setFontSize(14);
+    doc.setTextColor(0, 0, 0);
+    doc.text('Accessibility Issues', margin, yPos);
+    yPos += 8;
+    
+    doc.setFontSize(10);
+    doc.setTextColor(251, 191, 36);
+    data.accessibility.forEach((issue, index) => {
+      checkPageBreak();
+      const lines = doc.splitTextToSize(`${index + 1}. ${issue}`, maxWidth);
+      doc.text(lines, margin, yPos);
+      yPos += lines.length * lineHeight;
+    });
+    yPos += 5;
+  }
+
+  // Performance Metrics
+  checkPageBreak();
+  doc.setFontSize(14);
+  doc.setTextColor(0, 0, 0);
+  doc.text('Performance Metrics', margin, yPos);
+  yPos += 8;
+  
+  doc.setFontSize(10);
+  doc.setTextColor(80, 80, 80);
+  const perfMetrics = [
+    `Load Time: ${data.performance.loadTime}ms`,
+    `DOM Content Loaded: ${data.performance.domContentLoaded}ms`,
+    `Response Time: ${data.performance.responseTime}ms`,
+    `Transfer Size: ${data.performance.transferSize}KB`
+  ];
+  perfMetrics.forEach(metric => {
+    checkPageBreak();
+    doc.text(metric, margin, yPos);
+    yPos += lineHeight;
+  });
+
+  // Add screenshot on last page if available
+  if (data.screenshot) {
+    doc.addPage();
+    yPos = 20;
+    doc.setFontSize(14);
+    doc.setTextColor(0, 0, 0);
+    doc.text('Screenshot', margin, yPos);
+    yPos += 10;
+    
+    try {
+      const imgData = 'data:image/jpeg;base64,' + data.screenshot;
+      doc.addImage(imgData, 'JPEG', margin, yPos, maxWidth, maxWidth * 0.6);
+    } catch (e) {
+      console.error('Error adding screenshot to PDF:', e);
+    }
+  }
+
+  // Footer on each page
+  const pageCount = doc.internal.getNumberOfPages();
+  for (let i = 1; i <= pageCount; i++) {
+    doc.setPage(i);
+    doc.setFontSize(8);
+    doc.setTextColor(150, 150, 150);
+    doc.text(
+      `Generated by Site Scanner - Page ${i} of ${pageCount}`,
+      pageWidth / 2,
+      doc.internal.pageSize.height - 10,
+      { align: 'center' }
+    );
+  }
+
+  // Helper function to check if new page is needed
+  function checkPageBreak() {
+    if (yPos > doc.internal.pageSize.height - 30) {
+      doc.addPage();
+      yPos = 20;
+    }
+  }
+
+  // Save the PDF
+  const fileName = `site-scanner-${data.url.replace(/[^a-z0-9]/gi, '-')}-${Date.now()}.pdf`;
+  doc.save(fileName);
+  
+  showToast('PDF report downloaded successfully! 📄');
+}
+
+/**
+ * Export results to JSON
+ */
+function exportToJSON() {
+  const data = window.currentScanData;
+  if (!data) return;
+
+  // Remove screenshot from JSON export (too large)
+  const exportData = { ...data };
+  delete exportData.screenshot;
+
+  const dataStr = JSON.stringify(exportData, null, 2);
+  const dataBlob = new Blob([dataStr], { type: 'application/json' });
+  const url = URL.createObjectURL(dataBlob);
+  
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `site-scanner-${data.url.replace(/[^a-z0-9]/gi, '-')}-${Date.now()}.json`;
+  link.click();
+  
+  URL.revokeObjectURL(url);
+  showToast('JSON data downloaded successfully! 💾');
+}
+
+/**
+ * Copy data to clipboard
+ */
+function copyToClipboard() {
+  const data = window.currentScanData;
+  if (!data) return;
+
+  const exportData = { ...data };
+  delete exportData.screenshot;
+
+  const text = JSON.stringify(exportData, null, 2);
+  
+  navigator.clipboard.writeText(text).then(() => {
+    showToast('Data copied to clipboard! 📋');
+  }).catch(err => {
+    console.error('Failed to copy:', err);
+    showToast('Failed to copy data ❌');
+  });
+}
+
+/**
+ * Show toast notification
+ */
+function showToast(message) {
+  const toast = document.createElement('div');
+  toast.className = 'toast';
+  toast.textContent = message;
+  document.body.appendChild(toast);
+  
+  setTimeout(() => toast.classList.add('show'), 100);
+  setTimeout(() => {
+    toast.classList.remove('show');
+    setTimeout(() => toast.remove(), 300);
+  }, 3000);
+}
+
+/**
+ * Toggle screenshot section
+ */
+function toggleScreenshot() {
+  const content = document.getElementById('screenshotContent');
+  const header = content.previousElementSibling;
+  header.classList.toggle('active');
+  content.classList.toggle('active');
+}
+
+/**
+ * Open screenshot in modal
+ */
+function openScreenshotModal(src) {
+  const modal = document.getElementById('screenshotModal');
+  const modalImg = document.getElementById('modalImage');
+  modal.style.display = 'flex';
+  modalImg.src = src;
+  document.body.style.overflow = 'hidden';
+}
+
+/**
+ * Close screenshot modal
+ */
+function closeScreenshotModal() {
+  const modal = document.getElementById('screenshotModal');
+  modal.style.display = 'none';
+  document.body.style.overflow = 'auto';
+}
