@@ -4,9 +4,7 @@
 
 const API_URL = 'http://localhost:5000';
 
-/**
- * Main analyze function - triggered by button click
- */
+
 async function analyze() {
   const urlInput = document.getElementById('urlInput');
   const output = document.getElementById('output');
@@ -54,9 +52,6 @@ async function analyze() {
   }
 }
 
-/**
- * Display loading state
- */
 function showLoading() {
   const output = document.getElementById('output');
   output.innerHTML = `
@@ -67,9 +62,6 @@ function showLoading() {
   `;
 }
 
-/**
- * Display error message
- */
 function showError(title, message, details) {
   const output = document.getElementById('output');
   output.innerHTML = `
@@ -81,13 +73,9 @@ function showError(title, message, details) {
   `;
 }
 
-/**
- * Display analysis results
- */
 function displayResults(data) {
   const output = document.getElementById('output');
   
-  // Store data globally for export functions
   window.currentScanData = data;
   
   const html = `
@@ -157,6 +145,8 @@ function displayResults(data) {
         </div>
       </div>
 
+      ${data.lighthouse ? renderLighthouseScores(data.lighthouse) : renderLighthouseDisabled(data.meta.quickMode)}
+
       ${createSection('Technology Stack', renderTechStack(data.techStack))}
       ${createSection('Tracking & Analytics', renderTrackers(data.trackers))}
       ${createSection('SEO Analysis', renderSEO(data.seo))}
@@ -177,9 +167,6 @@ function displayResults(data) {
   attachSectionToggleHandlers();
 }
 
-/**
- * Create collapsible section
- */
 function createSection(title, content) {
   return `
     <div class="section">
@@ -191,9 +178,6 @@ function createSection(title, content) {
   `;
 }
 
-/**
- * Render technology stack
- */
 function renderTechStack(tech) {
   if (!tech || tech.length === 0) {
     return '<div class="empty-state">No technologies detected</div>';
@@ -203,9 +187,7 @@ function renderTechStack(tech) {
   ).join('')}</div>`;
 }
 
-/**
- * Render trackers
- */
+
 function renderTrackers(trackers) {
   if (!trackers || trackers.length === 0) {
     return '<div class="empty-state">No trackers detected</div>';
@@ -215,9 +197,7 @@ function renderTrackers(trackers) {
   ).join('')}</div>`;
 }
 
-/**
- * Render SEO analysis
- */
+
 function renderSEO(seo) {
   return `
     <div class="data-row">
@@ -269,9 +249,7 @@ function renderSEO(seo) {
   `;
 }
 
-/**
- * Render performance metrics
- */
+
 function renderPerformance(perf) {
   return `
     <div class="data-row">
@@ -293,9 +271,7 @@ function renderPerformance(perf) {
   `;
 }
 
-/**
- * Render layout structure
- */
+
 function renderLayout(layout) {
   return `
     <div class="data-row">
@@ -349,9 +325,7 @@ function renderLayout(layout) {
   `;
 }
 
-/**
- * Render accessibility issues
- */
+
 function renderAccessibility(issues) {
   if (!issues || issues.length === 0) {
     return '<div class="empty-state">✓ No accessibility issues detected</div>';
@@ -365,9 +339,7 @@ function renderAccessibility(issues) {
   `;
 }
 
-/**
- * Render security findings
- */
+
 function renderSecurity(findings) {
   if (!findings || findings.length === 0) {
     return '<div class="empty-state">✓ No security issues detected</div>';
@@ -382,16 +354,11 @@ function renderSecurity(findings) {
   `;
 }
 
-/**
- * Get performance badge based on threshold
- */
+
 function getPerformanceBadge(value, threshold) {
   return value < threshold ? '✓' : value < threshold * 2 ? '⚠️' : '✗';
 }
 
-/**
- * Escape HTML to prevent XSS
- */
 function escapeHtml(text) {
   if (!text) return '';
   const div = document.createElement('div');
@@ -399,9 +366,6 @@ function escapeHtml(text) {
   return div.innerHTML;
 }
 
-/**
- * Attach event handlers to section headers for collapsing/expanding
- */
 function attachSectionToggleHandlers() {
   document.querySelectorAll('.section-header').forEach(header => {
     header.addEventListener('click', () => {
@@ -410,6 +374,199 @@ function attachSectionToggleHandlers() {
       content.classList.toggle('active');
     });
   });
+}
+
+/* =======================================
+   LIGHTHOUSE RENDERING
+======================================= */
+
+/**
+ * Render Lighthouse scores grid
+ */
+function renderLighthouseScores(lighthouse) {
+  if (!lighthouse || !lighthouse.categories) {
+    return '';
+  }
+
+  const categories = lighthouse.categories;
+  
+  return `
+    <div class="lighthouse-section">
+      <div class="lighthouse-header">
+        <h2 class="lighthouse-title">
+          🔦 Lighthouse Audit
+          <span class="lighthouse-badge">Google</span>
+        </h2>
+        <p class="lighthouse-subtitle">Industry-standard performance metrics</p>
+      </div>
+
+      <div class="lighthouse-grid">
+        ${categories.performance ? `
+          <div class="lighthouse-card">
+            <div class="lighthouse-score" data-score="${categories.performance.score}">
+              <svg class="lighthouse-circle" viewBox="0 0 120 120">
+                <circle class="lighthouse-bg" cx="60" cy="60" r="54"></circle>
+                <circle class="lighthouse-progress" cx="60" cy="60" r="54" 
+                        style="stroke-dasharray: ${categories.performance.score * 3.39}, 339"></circle>
+              </svg>
+              <div class="lighthouse-score-value">${categories.performance.score}</div>
+            </div>
+            <div class="lighthouse-label">Performance</div>
+          </div>
+        ` : ''}
+
+        ${categories.accessibility ? `
+          <div class="lighthouse-card">
+            <div class="lighthouse-score" data-score="${categories.accessibility.score}">
+              <svg class="lighthouse-circle" viewBox="0 0 120 120">
+                <circle class="lighthouse-bg" cx="60" cy="60" r="54"></circle>
+                <circle class="lighthouse-progress" cx="60" cy="60" r="54"
+                        style="stroke-dasharray: ${categories.accessibility.score * 3.39}, 339"></circle>
+              </svg>
+              <div class="lighthouse-score-value">${categories.accessibility.score}</div>
+            </div>
+            <div class="lighthouse-label">Accessibility</div>
+          </div>
+        ` : ''}
+
+        ${categories['best-practices'] ? `
+          <div class="lighthouse-card">
+            <div class="lighthouse-score" data-score="${categories['best-practices'].score}">
+              <svg class="lighthouse-circle" viewBox="0 0 120 120">
+                <circle class="lighthouse-bg" cx="60" cy="60" r="54"></circle>
+                <circle class="lighthouse-progress" cx="60" cy="60" r="54"
+                        style="stroke-dasharray: ${categories['best-practices'].score * 3.39}, 339"></circle>
+              </svg>
+              <div class="lighthouse-score-value">${categories['best-practices'].score}</div>
+            </div>
+            <div class="lighthouse-label">Best Practices</div>
+          </div>
+        ` : ''}
+
+        ${categories.seo ? `
+          <div class="lighthouse-card">
+            <div class="lighthouse-score" data-score="${categories.seo.score}">
+              <svg class="lighthouse-circle" viewBox="0 0 120 120">
+                <circle class="lighthouse-bg" cx="60" cy="60" r="54"></circle>
+                <circle class="lighthouse-progress" cx="60" cy="60" r="54"
+                        style="stroke-dasharray: ${categories.seo.score * 3.39}, 339"></circle>
+              </svg>
+              <div class="lighthouse-score-value">${categories.seo.score}</div>
+            </div>
+            <div class="lighthouse-label">SEO</div>
+          </div>
+        ` : ''}
+
+        ${categories.pwa ? `
+          <div class="lighthouse-card">
+            <div class="lighthouse-score" data-score="${categories.pwa.score}">
+              <svg class="lighthouse-circle" viewBox="0 0 120 120">
+                <circle class="lighthouse-bg" cx="60" cy="60" r="54"></circle>
+                <circle class="lighthouse-progress" cx="60" cy="60" r="54"
+                        style="stroke-dasharray: ${categories.pwa.score * 3.39}, 339"></circle>
+              </svg>
+              <div class="lighthouse-score-value">${categories.pwa.score}</div>
+            </div>
+            <div class="lighthouse-label">PWA</div>
+          </div>
+        ` : ''}
+      </div>
+
+      ${lighthouse.metrics ? renderLighthouseMetrics(lighthouse.metrics) : ''}
+      ${lighthouse.opportunities && lighthouse.opportunities.length > 0 ? renderLighthouseOpportunities(lighthouse.opportunities) : ''}
+    </div>
+  `;
+}
+
+/**
+ * Render Lighthouse disabled message
+ */
+function renderLighthouseDisabled(quickMode) {
+  if (quickMode) {
+    return `
+      <div class="lighthouse-disabled">
+        <div class="lighthouse-disabled-icon">⚡</div>
+        <div class="lighthouse-disabled-title">Lighthouse Audit Skipped</div>
+        <div class="lighthouse-disabled-message">
+          Quick Mode is enabled. Disable Quick Mode to run Lighthouse audits for comprehensive performance insights.
+        </div>
+      </div>
+    `;
+  }
+  return '';
+}
+
+/**
+ * Render Lighthouse performance metrics
+ */
+function renderLighthouseMetrics(metrics) {
+  return `
+    <div class="lighthouse-metrics">
+      <h3 class="lighthouse-metrics-title">Performance Metrics</h3>
+      <div class="lighthouse-metrics-grid">
+        ${metrics['first-contentful-paint'] ? `
+          <div class="lighthouse-metric">
+            <div class="lighthouse-metric-label">First Contentful Paint</div>
+            <div class="lighthouse-metric-value">${metrics['first-contentful-paint'].displayValue}</div>
+          </div>
+        ` : ''}
+        ${metrics['largest-contentful-paint'] ? `
+          <div class="lighthouse-metric">
+            <div class="lighthouse-metric-label">Largest Contentful Paint</div>
+            <div class="lighthouse-metric-value">${metrics['largest-contentful-paint'].displayValue}</div>
+          </div>
+        ` : ''}
+        ${metrics['total-blocking-time'] ? `
+          <div class="lighthouse-metric">
+            <div class="lighthouse-metric-label">Total Blocking Time</div>
+            <div class="lighthouse-metric-value">${metrics['total-blocking-time'].displayValue}</div>
+          </div>
+        ` : ''}
+        ${metrics['cumulative-layout-shift'] ? `
+          <div class="lighthouse-metric">
+            <div class="lighthouse-metric-label">Cumulative Layout Shift</div>
+            <div class="lighthouse-metric-value">${metrics['cumulative-layout-shift'].displayValue}</div>
+          </div>
+        ` : ''}
+        ${metrics['speed-index'] ? `
+          <div class="lighthouse-metric">
+            <div class="lighthouse-metric-label">Speed Index</div>
+            <div class="lighthouse-metric-value">${metrics['speed-index'].displayValue}</div>
+          </div>
+        ` : ''}
+        ${metrics['interactive'] ? `
+          <div class="lighthouse-metric">
+            <div class="lighthouse-metric-label">Time to Interactive</div>
+            <div class="lighthouse-metric-value">${metrics['interactive'].displayValue}</div>
+          </div>
+        ` : ''}
+      </div>
+    </div>
+  `;
+}
+
+/**
+ * Render Lighthouse opportunities
+ */
+function renderLighthouseOpportunities(opportunities) {
+  return `
+    <div class="lighthouse-opportunities">
+      <h3 class="lighthouse-opportunities-title">💡 Top Opportunities</h3>
+      <div class="lighthouse-opportunities-list">
+        ${opportunities.map(opp => `
+          <div class="lighthouse-opportunity">
+            <div class="lighthouse-opportunity-header">
+              <div class="lighthouse-opportunity-title">${escapeHtml(opp.title)}</div>
+              <div class="lighthouse-opportunity-savings">
+                ${opp.savingsMs ? `Save ${Math.round(opp.savingsMs)}ms` : ''}
+              </div>
+            </div>
+            <div class="lighthouse-opportunity-description">${escapeHtml(opp.description)}</div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
 }
 
 /**
@@ -424,8 +581,6 @@ document.addEventListener('DOMContentLoaded', () => {
         analyze();
       }
     });
-
-    // Auto-focus input on page load
     urlInput.focus();
   }
 });
@@ -505,7 +660,6 @@ function exportToPDF() {
     yPos += 10;
   }
 
-  // SEO Issues
   if (data.seo.issues && data.seo.issues.length > 0) {
     checkPageBreak();
     doc.setFontSize(14);
@@ -524,7 +678,6 @@ function exportToPDF() {
     yPos += 5;
   }
 
-  // Accessibility Issues
   if (data.accessibility && data.accessibility.length > 0) {
     checkPageBreak();
     doc.setFontSize(14);
@@ -543,7 +696,6 @@ function exportToPDF() {
     yPos += 5;
   }
 
-  // Performance Metrics
   checkPageBreak();
   doc.setFontSize(14);
   doc.setTextColor(0, 0, 0);
@@ -564,7 +716,6 @@ function exportToPDF() {
     yPos += lineHeight;
   });
 
-  // Add screenshot on last page if available
   if (data.screenshot) {
     doc.addPage();
     yPos = 20;
@@ -581,7 +732,6 @@ function exportToPDF() {
     }
   }
 
-  // Footer on each page
   const pageCount = doc.internal.getNumberOfPages();
   for (let i = 1; i <= pageCount; i++) {
     doc.setPage(i);
@@ -595,7 +745,6 @@ function exportToPDF() {
     );
   }
 
-  // Helper function to check if new page is needed
   function checkPageBreak() {
     if (yPos > doc.internal.pageSize.height - 30) {
       doc.addPage();
@@ -617,7 +766,6 @@ function exportToJSON() {
   const data = window.currentScanData;
   if (!data) return;
 
-  // Remove screenshot from JSON export (too large)
   const exportData = { ...data };
   delete exportData.screenshot;
 
