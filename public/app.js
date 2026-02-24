@@ -4,7 +4,9 @@
 
 const API_URL = 'http://localhost:5000';
 
-
+/**
+ * Main analyze function - triggered by button click
+ */
 async function analyze() {
   const urlInput = document.getElementById('urlInput');
   const output = document.getElementById('output');
@@ -52,6 +54,9 @@ async function analyze() {
   }
 }
 
+/**
+ * Display loading state
+ */
 function showLoading() {
   const output = document.getElementById('output');
   output.innerHTML = `
@@ -62,6 +67,9 @@ function showLoading() {
   `;
 }
 
+/**
+ * Display error message
+ */
 function showError(title, message, details) {
   const output = document.getElementById('output');
   output.innerHTML = `
@@ -73,10 +81,17 @@ function showError(title, message, details) {
   `;
 }
 
+/**
+ * Display analysis results
+ */
 function displayResults(data) {
   const output = document.getElementById('output');
   
+  // Store data globally for export functions
   window.currentScanData = data;
+  
+  // Save to history
+  saveToHistory(data);
   
   const html = `
     <div class="results">
@@ -167,6 +182,9 @@ function displayResults(data) {
   attachSectionToggleHandlers();
 }
 
+/**
+ * Create collapsible section
+ */
 function createSection(title, content) {
   return `
     <div class="section">
@@ -178,6 +196,9 @@ function createSection(title, content) {
   `;
 }
 
+/**
+ * Render technology stack
+ */
 function renderTechStack(tech) {
   if (!tech || tech.length === 0) {
     return '<div class="empty-state">No technologies detected</div>';
@@ -187,7 +208,9 @@ function renderTechStack(tech) {
   ).join('')}</div>`;
 }
 
-
+/**
+ * Render trackers
+ */
 function renderTrackers(trackers) {
   if (!trackers || trackers.length === 0) {
     return '<div class="empty-state">No trackers detected</div>';
@@ -197,7 +220,9 @@ function renderTrackers(trackers) {
   ).join('')}</div>`;
 }
 
-
+/**
+ * Render SEO analysis
+ */
 function renderSEO(seo) {
   return `
     <div class="data-row">
@@ -249,7 +274,9 @@ function renderSEO(seo) {
   `;
 }
 
-
+/**
+ * Render performance metrics
+ */
 function renderPerformance(perf) {
   return `
     <div class="data-row">
@@ -271,7 +298,9 @@ function renderPerformance(perf) {
   `;
 }
 
-
+/**
+ * Render layout structure
+ */
 function renderLayout(layout) {
   return `
     <div class="data-row">
@@ -325,7 +354,9 @@ function renderLayout(layout) {
   `;
 }
 
-
+/**
+ * Render accessibility issues
+ */
 function renderAccessibility(issues) {
   if (!issues || issues.length === 0) {
     return '<div class="empty-state">✓ No accessibility issues detected</div>';
@@ -339,7 +370,9 @@ function renderAccessibility(issues) {
   `;
 }
 
-
+/**
+ * Render security findings
+ */
 function renderSecurity(findings) {
   if (!findings || findings.length === 0) {
     return '<div class="empty-state">✓ No security issues detected</div>';
@@ -354,11 +387,16 @@ function renderSecurity(findings) {
   `;
 }
 
-
+/**
+ * Get performance badge based on threshold
+ */
 function getPerformanceBadge(value, threshold) {
   return value < threshold ? '✓' : value < threshold * 2 ? '⚠️' : '✗';
 }
 
+/**
+ * Escape HTML to prevent XSS
+ */
 function escapeHtml(text) {
   if (!text) return '';
   const div = document.createElement('div');
@@ -366,6 +404,9 @@ function escapeHtml(text) {
   return div.innerHTML;
 }
 
+/**
+ * Attach event handlers to section headers for collapsing/expanding
+ */
 function attachSectionToggleHandlers() {
   document.querySelectorAll('.section-header').forEach(header => {
     header.addEventListener('click', () => {
@@ -581,6 +622,8 @@ document.addEventListener('DOMContentLoaded', () => {
         analyze();
       }
     });
+
+    // Auto-focus input on page load
     urlInput.focus();
   }
 });
@@ -660,6 +703,7 @@ function exportToPDF() {
     yPos += 10;
   }
 
+  // SEO Issues
   if (data.seo.issues && data.seo.issues.length > 0) {
     checkPageBreak();
     doc.setFontSize(14);
@@ -678,6 +722,7 @@ function exportToPDF() {
     yPos += 5;
   }
 
+  // Accessibility Issues
   if (data.accessibility && data.accessibility.length > 0) {
     checkPageBreak();
     doc.setFontSize(14);
@@ -696,6 +741,7 @@ function exportToPDF() {
     yPos += 5;
   }
 
+  // Performance Metrics
   checkPageBreak();
   doc.setFontSize(14);
   doc.setTextColor(0, 0, 0);
@@ -716,6 +762,7 @@ function exportToPDF() {
     yPos += lineHeight;
   });
 
+  // Add screenshot on last page if available
   if (data.screenshot) {
     doc.addPage();
     yPos = 20;
@@ -732,6 +779,7 @@ function exportToPDF() {
     }
   }
 
+  // Footer on each page
   const pageCount = doc.internal.getNumberOfPages();
   for (let i = 1; i <= pageCount; i++) {
     doc.setPage(i);
@@ -745,6 +793,7 @@ function exportToPDF() {
     );
   }
 
+  // Helper function to check if new page is needed
   function checkPageBreak() {
     if (yPos > doc.internal.pageSize.height - 30) {
       doc.addPage();
@@ -766,6 +815,7 @@ function exportToJSON() {
   const data = window.currentScanData;
   if (!data) return;
 
+  // Remove screenshot from JSON export (too large)
   const exportData = { ...data };
   delete exportData.screenshot;
 
@@ -846,4 +896,247 @@ function closeScreenshotModal() {
   const modal = document.getElementById('screenshotModal');
   modal.style.display = 'none';
   document.body.style.overflow = 'auto';
+}
+
+/* =======================================
+   SCAN HISTORY
+======================================= */
+
+const HISTORY_KEY = 'site_scanner_history';
+const MAX_HISTORY = 50;
+
+/**
+ * Save scan to history
+ */
+function saveToHistory(data) {
+  try {
+    let history = getHistory();
+    
+    // Create history entry (exclude screenshot to save space)
+    const entry = {
+      id: Date.now(),
+      url: data.url,
+      timestamp: data.meta.analyzedAt,
+      scores: {
+        seo: data.seo.score,
+        loadTime: data.performance.loadTime,
+        accessibility: data.accessibility.length,
+        security: data.security.length,
+        lighthouse: data.lighthouse ? {
+          performance: data.lighthouse.categories.performance?.score || null,
+          accessibility: data.lighthouse.categories.accessibility?.score || null,
+          seo: data.lighthouse.categories.seo?.score || null,
+          bestPractices: data.lighthouse.categories['best-practices']?.score || null,
+          pwa: data.lighthouse.categories.pwa?.score || null
+        } : null
+      },
+      quickMode: data.meta.quickMode,
+      // Store full data but without screenshot
+      fullData: { ...data, screenshot: null }
+    };
+    
+    // Add to beginning of array
+    history.unshift(entry);
+    
+    // Keep only last MAX_HISTORY entries
+    if (history.length > MAX_HISTORY) {
+      history = history.slice(0, MAX_HISTORY);
+    }
+    
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+    console.log('✓ Scan saved to history');
+    
+    // Update history UI if visible
+    updateHistoryDisplay();
+    
+  } catch (error) {
+    console.error('Failed to save to history:', error);
+  }
+}
+
+/**
+ * Get scan history from localStorage
+ */
+function getHistory() {
+  try {
+    const data = localStorage.getItem(HISTORY_KEY);
+    return data ? JSON.parse(data) : [];
+  } catch (error) {
+    console.error('Failed to load history:', error);
+    return [];
+  }
+}
+
+/**
+ * Delete scan from history
+ */
+function deleteFromHistory(id) {
+  try {
+    let history = getHistory();
+    history = history.filter(entry => entry.id !== id);
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+    updateHistoryDisplay();
+    showToast('Scan deleted from history 🗑️');
+  } catch (error) {
+    console.error('Failed to delete from history:', error);
+  }
+}
+
+/**
+ * Clear all history
+ */
+function clearHistory() {
+  if (confirm('Are you sure you want to clear all scan history? This cannot be undone.')) {
+    localStorage.removeItem(HISTORY_KEY);
+    updateHistoryDisplay();
+    showToast('History cleared ✨');
+  }
+}
+
+/**
+ * Load scan from history
+ */
+function loadFromHistory(id) {
+  try {
+    const history = getHistory();
+    const entry = history.find(e => e.id === id);
+    
+    if (entry && entry.fullData) {
+      displayResults(entry.fullData);
+      showToast('Scan loaded from history 📂');
+      toggleHistory(); // Close panel
+      
+      // Scroll to results
+      setTimeout(() => {
+        document.getElementById('output').scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'start' 
+        });
+      }, 100);
+    }
+  } catch (error) {
+    console.error('Failed to load from history:', error);
+    showToast('Failed to load scan ❌');
+  }
+}
+
+/**
+ * Toggle history panel
+ */
+function toggleHistory() {
+  const panel = document.getElementById('historyPanel');
+  const overlay = document.getElementById('historyOverlay');
+  
+  if (panel.classList.contains('open')) {
+    panel.classList.remove('open');
+    overlay.classList.remove('show');
+    document.body.style.overflow = 'auto';
+  } else {
+    updateHistoryDisplay();
+    panel.classList.add('open');
+    overlay.classList.add('show');
+    document.body.style.overflow = 'hidden';
+  }
+}
+
+/**
+ * Update history display
+ */
+function updateHistoryDisplay() {
+  const container = document.getElementById('historyList');
+  if (!container) return;
+  
+  const history = getHistory();
+  
+  if (history.length === 0) {
+    container.innerHTML = `
+      <div class="history-empty">
+        <div class="history-empty-icon">📊</div>
+        <div class="history-empty-title">No Scan History</div>
+        <div class="history-empty-message">
+          Your analyzed websites will appear here. Start by scanning a website!
+        </div>
+      </div>
+    `;
+    return;
+  }
+  
+  container.innerHTML = history.map(entry => `
+    <div class="history-item" data-id="${entry.id}">
+      <div class="history-item-header">
+        <div class="history-item-url">${escapeHtml(entry.url)}</div>
+        <button class="history-item-delete" onclick="deleteFromHistory(${entry.id})" title="Delete">
+          ×
+        </button>
+      </div>
+      
+      <div class="history-item-meta">
+        <span class="history-item-date">${formatDate(entry.timestamp)}</span>
+        ${entry.quickMode ? '<span class="history-badge quick">Quick Mode</span>' : ''}
+      </div>
+      
+      <div class="history-item-scores">
+        <div class="history-score-mini">
+          <div class="history-score-label">SEO</div>
+          <div class="history-score-value" data-score="${entry.scores.seo}">${entry.scores.seo}</div>
+        </div>
+        <div class="history-score-mini">
+          <div class="history-score-label">Load</div>
+          <div class="history-score-value">${(entry.scores.loadTime / 1000).toFixed(1)}s</div>
+        </div>
+        ${entry.scores.lighthouse && entry.scores.lighthouse.performance !== null ? `
+          <div class="history-score-mini">
+            <div class="history-score-label">LH</div>
+            <div class="history-score-value" data-score="${entry.scores.lighthouse.performance}">${entry.scores.lighthouse.performance}</div>
+          </div>
+        ` : ''}
+      </div>
+      
+      <button class="history-item-load" onclick="loadFromHistory(${entry.id})">
+        View Results →
+      </button>
+    </div>
+  `).join('');
+}
+
+/**
+ * Format date for display
+ */
+function formatDate(isoString) {
+  const date = new Date(isoString);
+  const now = new Date();
+  const diffMs = now - date;
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+  
+  if (diffMins < 1) return 'Just now';
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays < 7) return `${diffDays}d ago`;
+  
+  return date.toLocaleDateString();
+}
+
+/**
+ * Export history as JSON
+ */
+function exportHistory() {
+  const history = getHistory();
+  if (history.length === 0) {
+    showToast('No history to export ❌');
+    return;
+  }
+  
+  const dataStr = JSON.stringify(history, null, 2);
+  const dataBlob = new Blob([dataStr], { type: 'application/json' });
+  const url = URL.createObjectURL(dataBlob);
+  
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `site-scanner-history-${Date.now()}.json`;
+  link.click();
+  
+  URL.revokeObjectURL(url);
+  showToast('History exported successfully! 💾');
 }
