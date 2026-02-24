@@ -14,12 +14,18 @@
   <!-- Styles -->
   <link rel="stylesheet" href="styles.css">
   
+  <!-- PDF Generation Library -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
   <div class="container">
-    <header>Web BluePrint Extractor</h1>
+    <header>
+      <h1>SITE SCANNER</h1>
       <div class="subtitle">Deep Web Analysis Engine</div>
+      
+      <button class="history-toggle-btn" onclick="toggleHistory()" title="View scan history">
+        📊 History
+      </button>
     </header>
 
     <div class="input-section">
@@ -44,6 +50,28 @@
     </div>
 
     <div id="output"></div>
+  </div>
+
+  <!-- History Panel -->
+  <div id="historyOverlay" class="history-overlay" onclick="toggleHistory()"></div>
+  <div id="historyPanel" class="history-panel">
+    <div class="history-panel-header">
+      <h2 class="history-panel-title">📊 Scan History</h2>
+      <div class="history-panel-actions">
+        <button class="history-action-btn" onclick="exportHistory()" title="Export history">
+          💾 Export
+        </button>
+        <button class="history-action-btn danger" onclick="clearHistory()" title="Clear all history">
+          🗑️ Clear All
+        </button>
+        <button class="history-close-btn" onclick="toggleHistory()" title="Close">
+          ×
+        </button>
+      </div>
+    </div>
+    <div class="history-panel-body" id="historyList">
+      <!-- History items populated by JavaScript -->
+    </div>
   </div>
 
   <script src="app.js"></script>
