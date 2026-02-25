@@ -58,6 +58,13 @@
     <div class="history-panel-header">
       <h2 class="history-panel-title">📊 Scan History</h2>
       <div class="history-panel-actions">
+        <button id="compareButton" 
+                class="history-action-btn compare-btn" 
+                onclick="startComparison()" 
+                disabled
+                title="Select 2 scans to compare">
+          ⚖️ Compare (0/2)
+        </button>
         <button class="history-action-btn" onclick="exportHistory()" title="Export history">
           💾 Export
         </button>
