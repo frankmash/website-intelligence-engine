@@ -1064,6 +1064,13 @@ function updateHistoryDisplay() {
   container.innerHTML = history.map(entry => `
     <div class="history-item" data-id="${entry.id}">
       <div class="history-item-header">
+        <label class="history-compare-checkbox">
+          <input type="checkbox" 
+                 class="compare-checkbox" 
+                 data-id="${entry.id}"
+                 onchange="handleCompareSelection(${entry.id})">
+          <span class="checkbox-label">Compare</span>
+        </label>
         <div class="history-item-url">${escapeHtml(entry.url)}</div>
         <button class="history-item-delete" onclick="deleteFromHistory(${entry.id})" title="Delete">
           ×
@@ -1097,6 +1104,9 @@ function updateHistoryDisplay() {
       </button>
     </div>
   `).join('');
+  
+  // Update compare button state
+  updateCompareButton();
 }
 
 /**
@@ -1139,4 +1149,330 @@ function exportHistory() {
   
   URL.revokeObjectURL(url);
   showToast('History exported successfully! 💾');
+}
+
+/* =======================================
+   COMPARE MODE
+======================================= */
+
+let selectedForCompare = [];
+
+/**
+ * Handle compare checkbox selection
+ */
+function handleCompareSelection(id) {
+  const checkbox = document.querySelector(`.compare-checkbox[data-id="${id}"]`);
+  
+  if (checkbox.checked) {
+    if (selectedForCompare.length >= 2) {
+      // Uncheck the oldest selection
+      const oldestId = selectedForCompare[0];
+      const oldestCheckbox = document.querySelector(`.compare-checkbox[data-id="${oldestId}"]`);
+      if (oldestCheckbox) oldestCheckbox.checked = false;
+      selectedForCompare.shift();
+    }
+    selectedForCompare.push(id);
+  } else {
+    selectedForCompare = selectedForCompare.filter(i => i !== id);
+  }
+  
+  updateCompareButton();
+}
+
+/**
+ * Update compare button state
+ */
+function updateCompareButton() {
+  const compareBtn = document.getElementById('compareButton');
+  if (!compareBtn) return;
+  
+  if (selectedForCompare.length === 2) {
+    compareBtn.disabled = false;
+    compareBtn.classList.add('active');
+  } else {
+    compareBtn.disabled = true;
+    compareBtn.classList.remove('active');
+  }
+  
+  compareBtn.textContent = `⚖️ Compare (${selectedForCompare.length}/2)`;
+}
+
+/**
+ * Start comparison
+ */
+function startComparison() {
+  if (selectedForCompare.length !== 2) {
+    showToast('Please select 2 scans to compare ⚖️');
+    return;
+  }
+  
+  const history = getHistory();
+  const scan1 = history.find(e => e.id === selectedForCompare[0]);
+  const scan2 = history.find(e => e.id === selectedForCompare[1]);
+  
+  if (!scan1 || !scan2) {
+    showToast('Error loading scans ❌');
+    return;
+  }
+  
+  displayComparison(scan1, scan2);
+  toggleHistory();
+  
+  // Scroll to results
+  setTimeout(() => {
+    document.getElementById('output').scrollIntoView({ 
+      behavior: 'smooth', 
+      block: 'start' 
+    });
+  }, 100);
+}
+
+/**
+ * Display comparison view
+ */
+function displayComparison(scan1, scan2) {
+  const output = document.getElementById('output');
+  
+  const html = `
+    <div class="compare-view">
+      <div class="compare-header">
+        <h2 class="compare-title">⚖️ Comparison View</h2>
+        <button class="compare-close" onclick="closeComparison()">
+          ✕ Close Comparison
+        </button>
+      </div>
+      
+      <div class="compare-grid">
+        <!-- Left Side -->
+        <div class="compare-column">
+          <div class="compare-column-header scan-a">
+            <div class="compare-label">Scan A</div>
+            <div class="compare-url">${escapeHtml(scan1.url)}</div>
+            <div class="compare-date">${formatDate(scan1.timestamp)}</div>
+          </div>
+          
+          ${renderComparisonScores(scan1, 'a')}
+          ${renderComparisonDetails(scan1, 'a')}
+        </div>
+        
+        <!-- Right Side -->
+        <div class="compare-column">
+          <div class="compare-column-header scan-b">
+            <div class="compare-label">Scan B</div>
+            <div class="compare-url">${escapeHtml(scan2.url)}</div>
+            <div class="compare-date">${formatDate(scan2.timestamp)}</div>
+          </div>
+          
+          ${renderComparisonScores(scan2, 'b')}
+          ${renderComparisonDetails(scan2, 'b')}
+        </div>
+      </div>
+      
+      <!-- Summary -->
+      ${renderComparisonSummary(scan1, scan2)}
+    </div>
+  `;
+  
+  output.innerHTML = html;
+}
+
+/**
+ * Render comparison scores
+ */
+function renderComparisonScores(scan, side) {
+  const scores = scan.scores;
+  const otherScan = side === 'a' ? 
+    getHistory().find(e => e.id === selectedForCompare[1]) : 
+    getHistory().find(e => e.id === selectedForCompare[0]);
+  const otherScores = otherScan.scores;
+  
+  return `
+    <div class="compare-scores">
+      <div class="compare-score-card">
+        <div class="compare-score-label">SEO Score</div>
+        <div class="compare-score-value">${scores.seo}/100</div>
+        ${renderDiff(scores.seo, otherScores.seo)}
+      </div>
+      
+      <div class="compare-score-card">
+        <div class="compare-score-label">Load Time</div>
+        <div class="compare-score-value">${(scores.loadTime / 1000).toFixed(2)}s</div>
+        ${renderDiff(scores.loadTime, otherScores.loadTime, true)}
+      </div>
+      
+      <div class="compare-score-card">
+        <div class="compare-score-label">Accessibility</div>
+        <div class="compare-score-value">${scores.accessibility} issues</div>
+        ${renderDiff(scores.accessibility, otherScores.accessibility, true)}
+      </div>
+      
+      <div class="compare-score-card">
+        <div class="compare-score-label">Security</div>
+        <div class="compare-score-value">${scores.security} findings</div>
+        ${renderDiff(scores.security, otherScores.security, true)}
+      </div>
+      
+      ${scores.lighthouse ? `
+        <div class="compare-score-card lighthouse">
+          <div class="compare-score-label">Lighthouse Performance</div>
+          <div class="compare-score-value">${scores.lighthouse.performance || 'N/A'}</div>
+          ${scores.lighthouse.performance && otherScores.lighthouse?.performance ? 
+            renderDiff(scores.lighthouse.performance, otherScores.lighthouse.performance) : ''}
+        </div>
+        
+        <div class="compare-score-card lighthouse">
+          <div class="compare-score-label">Lighthouse Accessibility</div>
+          <div class="compare-score-value">${scores.lighthouse.accessibility || 'N/A'}</div>
+          ${scores.lighthouse.accessibility && otherScores.lighthouse?.accessibility ? 
+            renderDiff(scores.lighthouse.accessibility, otherScores.lighthouse.accessibility) : ''}
+        </div>
+        
+        <div class="compare-score-card lighthouse">
+          <div class="compare-score-label">Lighthouse SEO</div>
+          <div class="compare-score-value">${scores.lighthouse.seo || 'N/A'}</div>
+          ${scores.lighthouse.seo && otherScores.lighthouse?.seo ? 
+            renderDiff(scores.lighthouse.seo, otherScores.lighthouse.seo) : ''}
+        </div>
+        
+        <div class="compare-score-card lighthouse">
+          <div class="compare-score-label">Lighthouse Best Practices</div>
+          <div class="compare-score-value">${scores.lighthouse.bestPractices || 'N/A'}</div>
+          ${scores.lighthouse.bestPractices && otherScores.lighthouse?.bestPractices ? 
+            renderDiff(scores.lighthouse.bestPractices, otherScores.lighthouse.bestPractices) : ''}
+        </div>
+      ` : ''}
+    </div>
+  `;
+}
+
+/**
+ * Render difference indicator
+ */
+function renderDiff(value1, value2, lowerIsBetter = false) {
+  const diff = value1 - value2;
+  
+  if (diff === 0) {
+    return '<div class="compare-diff neutral">→ Same</div>';
+  }
+  
+  const isPositive = lowerIsBetter ? diff < 0 : diff > 0;
+  const arrow = diff > 0 ? '↑' : '↓';
+  const className = isPositive ? 'better' : 'worse';
+  const absValue = Math.abs(diff);
+  const displayValue = absValue < 1 ? absValue.toFixed(2) : Math.round(absValue);
+  
+  return `<div class="compare-diff ${className}">${arrow} ${displayValue}</div>`;
+}
+
+/**
+ * Render comparison details
+ */
+function renderComparisonDetails(scan, side) {
+  const data = scan.fullData;
+  
+  return `
+    <div class="compare-details">
+      <div class="compare-detail-section">
+        <h4>Technology Stack</h4>
+        <div class="compare-tech-list">
+          ${data.techStack && data.techStack.length > 0 ? 
+            data.techStack.map(t => `<span class="tech-chip">${escapeHtml(t)}</span>`).join('') : 
+            '<span class="empty">None detected</span>'}
+        </div>
+      </div>
+      
+      <div class="compare-detail-section">
+        <h4>Trackers</h4>
+        <div class="compare-tech-list">
+          ${data.trackers && data.trackers.length > 0 ? 
+            data.trackers.map(t => `<span class="tech-chip tracker">${escapeHtml(t)}</span>`).join('') : 
+            '<span class="empty">None detected</span>'}
+        </div>
+      </div>
+      
+      <div class="compare-detail-section">
+        <h4>SEO Issues</h4>
+        <div class="issue-count ${data.seo.issues.length === 0 ? 'good' : 'warning'}">
+          ${data.seo.issues.length} issues
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+/**
+ * Render comparison summary
+ */
+function renderComparisonSummary(scan1, scan2) {
+  const winner = determineWinner(scan1, scan2);
+  
+  return `
+    <div class="compare-summary">
+      <h3 class="compare-summary-title">📊 Summary</h3>
+      <div class="compare-summary-content">
+        ${winner === 'tie' ? `
+          <div class="summary-tie">
+            <div class="summary-icon">🤝</div>
+            <div class="summary-text">Both scans show similar performance</div>
+          </div>
+        ` : `
+          <div class="summary-winner">
+            <div class="summary-icon">🏆</div>
+            <div class="summary-text">
+              <strong>${winner === 'a' ? 'Scan A' : 'Scan B'}</strong> performs better overall
+              <br>
+              <span class="summary-url">${escapeHtml(winner === 'a' ? scan1.url : scan2.url)}</span>
+            </div>
+          </div>
+        `}
+      </div>
+    </div>
+  `;
+}
+
+/**
+ * Determine which scan performs better
+ */
+function determineWinner(scan1, scan2) {
+  let score1 = 0;
+  let score2 = 0;
+  
+  // SEO Score (higher is better)
+  if (scan1.scores.seo > scan2.scores.seo) score1++;
+  else if (scan2.scores.seo > scan1.scores.seo) score2++;
+  
+  // Load Time (lower is better)
+  if (scan1.scores.loadTime < scan2.scores.loadTime) score1++;
+  else if (scan2.scores.loadTime < scan1.scores.loadTime) score2++;
+  
+  // Accessibility Issues (lower is better)
+  if (scan1.scores.accessibility < scan2.scores.accessibility) score1++;
+  else if (scan2.scores.accessibility < scan1.scores.accessibility) score2++;
+  
+  // Lighthouse Performance (higher is better)
+  if (scan1.scores.lighthouse?.performance && scan2.scores.lighthouse?.performance) {
+    if (scan1.scores.lighthouse.performance > scan2.scores.lighthouse.performance) score1++;
+    else if (scan2.scores.lighthouse.performance > scan1.scores.lighthouse.performance) score2++;
+  }
+  
+  if (score1 > score2) return 'a';
+  if (score2 > score1) return 'b';
+  return 'tie';
+}
+
+/**
+ * Close comparison view
+ */
+function closeComparison() {
+  selectedForCompare = [];
+  const output = document.getElementById('output');
+  output.innerHTML = '';
+  
+  // Uncheck all compare checkboxes
+  document.querySelectorAll('.compare-checkbox').forEach(cb => {
+    cb.checked = false;
+  });
+  
+  updateCompareButton();
+  showToast('Comparison closed');
 }
